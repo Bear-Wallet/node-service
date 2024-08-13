@@ -140,8 +140,20 @@ app.get('/get-wallet', async (req: Request, res: Response) => {
         const nfts = await getNFTs(walletAddress!, network);
         const tokens = await getTokens(web3, network, walletAddress!);
 
+        const resp = await fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=ETH&convert=USD`, {
+            headers: {
+                'X-CMC_PRO_API_KEY': `${process.env.COIN_MARKET_CAP_API}`
+            }
+        })
+        const jsn = await resp.json();
+        const quote = jsn.data.ETH.quote;
+        const price = quote.USD.price;
+        const percent_change = quote.USD.percent_change_24h;
+
         res.send({
-            balance: balanceEth,
+            balance: parseFloat(balanceEth),
+            price: price,
+            percent_change: percent_change,
             nfts: nfts,
             tokens: tokens
         });
