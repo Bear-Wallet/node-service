@@ -14,3 +14,8 @@ export interface NFT {
   is_disabled: string;
   is_nsfw: string;
 }
+
+export interface StoreSignatureBody {
+  sessionId: string;
+  signedMessage: string;
+}

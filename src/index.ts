@@ -6,9 +6,12 @@ import * as dotenv from "dotenv";
 import { NFT } from "./interface";
 import { readFileSync } from "fs";
 
+import sdkRouter from "./sdk-routes";
+
 dotenv.config();
 
 const app = express();
+
 const port = process.env.PORT;
 
 app.use(bodyParser.json());
@@ -208,6 +211,8 @@ app.get("/get-gas-price", async (req: Request, res: Response) => {
     });
   }
 });
+
+app.use("/sdk", sdkRouter);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
