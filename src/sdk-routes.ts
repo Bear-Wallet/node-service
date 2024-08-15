@@ -7,19 +7,19 @@ const prisma = new PrismaClient();
 const router = express.Router();
 
 router.post(
-  "/store-signature",
+  "/store-data",
   async (req: Request<{}, {}, StoreSignatureBody>, res: Response) => {
-    const { sessionId, signedMessage } = req.body;
+    const { sessionId, data } = req.body;
 
     try {
-      const signature = await prisma.signature.create({
+      const sessionData = await prisma.sessionData.create({
         data: {
           sessionId,
-          result: signedMessage,
+          data,
         },
       });
 
-      res.status(200).json(signature);
+      res.status(200).json(sessionData);
     } catch (error) {
       console.error("Error storing signature:", error);
       res.status(500).json({ error: "Failed to store signature" });
@@ -28,22 +28,22 @@ router.post(
 );
 
 router.get(
-  "/get-signature",
+  "/get-data",
   async (req: Request<{}, {}, {}, { sessionId: string }>, res: Response) => {
     const { sessionId } = req.query;
 
     try {
-      const signature = await prisma.signature.findUnique({
+      const sessionData = await prisma.sessionData.findUnique({
         where: { sessionId },
       });
 
-      if (signature) {
+      if (sessionData) {
         // TODO: CRON job to return stale signatures
         // await prisma.signature.delete({
         //   where: { sessionId },
         // });
 
-        res.json({ signedMessage: signature.result });
+        res.status(200).json(sessionData);
       } else {
         res.status(404).json({ error: "Signature not found" });
       }

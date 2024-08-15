@@ -17,5 +17,6 @@ export interface NFT {
 
 export interface StoreSignatureBody {
   sessionId: string;
-  signedMessage: string;
+  type: "SIGN_TXN" | "SIGN_MSG" | "SEND_TXN" | "CONNECT";
+  data: string;
 }
