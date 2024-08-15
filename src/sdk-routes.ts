@@ -9,13 +9,14 @@ const router = express.Router();
 router.post(
   "/store-data",
   async (req: Request<{}, {}, StoreSignatureBody>, res: Response) => {
-    const { sessionId, data } = req.body;
+    const { sessionId, data, type } = req.body;
 
     try {
       const sessionData = await prisma.sessionData.create({
         data: {
           sessionId,
           data,
+          type,
         },
       });
 

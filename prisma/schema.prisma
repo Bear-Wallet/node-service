@@ -11,5 +11,6 @@ model SessionData {
   id        Int      @id @default(autoincrement())
   sessionId String   @unique
   data      String
+  type      String
   createdAt DateTime @default(now())
 }
