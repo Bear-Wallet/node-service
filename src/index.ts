@@ -1,12 +1,13 @@
 import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import Web3 from "web3";
+import Web3, { HexString, Transaction } from "web3";
 import * as dotenv from "dotenv";
 import { NFT } from "./interface";
 import { readFileSync } from "fs";
 
 import sdkRouter from "./sdk-routes";
+import { RegisteredSubscription } from "web3/lib/commonjs/eth.exports";
 
 dotenv.config();
 
@@ -16,6 +17,29 @@ const port = process.env.PORT;
 
 app.use(bodyParser.json());
 app.use(cors());
+
+const providerUrls = {
+  mainnet: `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+  sepolia: `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+  arbitrum_mainnet: `https://arbitrum-mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+  arbitrum_sepolia: `https://arbitrum-sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+};
+
+const providers: {
+  [key: string]: Web3<RegisteredSubscription>;
+} = {
+  mainnet: new Web3(new Web3.providers.HttpProvider(providerUrls.mainnet)),
+  sepolia: new Web3(new Web3.providers.HttpProvider(providerUrls.sepolia)),
+  arbitrum_mainnet: new Web3(
+    new Web3.providers.HttpProvider(providerUrls.arbitrum_mainnet)
+  ),
+  arbitrum_sepolia: new Web3(
+    new Web3.providers.HttpProvider(providerUrls.arbitrum_sepolia)
+  ),
+  default: new Web3(
+    new Web3.providers.HttpProvider(providerUrls.arbitrum_sepolia)
+  ),
+};
 
 const web3Mainnet = new Web3(
   new Web3.providers.HttpProvider(
@@ -130,7 +154,7 @@ app.get("/get-wallet", async (req: Request, res: Response) => {
   const chainType = req.query.chain?.toString();
   try {
     let network = "";
-    let web3 = null;
+    let web3: Web3<RegisteredSubscription> | null = null;
 
     if (chainType === "mainnet") {
       web3 = web3Mainnet;
@@ -175,17 +199,9 @@ app.get("/get-wallet", async (req: Request, res: Response) => {
 });
 
 app.get("/get-gas-price", async (req: Request, res: Response) => {
-  const chainType = req.query.chain?.toString();
+  const chainType = req.query.chain?.toString() ?? "default";
 
-  let network = "mainnet";
-  let web3 = null;
-
-  if (chainType === "mainnet") {
-    web3 = web3Mainnet;
-  } else {
-    web3 = web3Sepolia;
-    network = "sepolia";
-  }
+  const web3 = providers[chainType] ?? providers.default;
 
   try {
     // Get the current gas price in wei
@@ -211,6 +227,42 @@ app.get("/get-gas-price", async (req: Request, res: Response) => {
     });
   }
 });
+
+app.post(
+  "/send-transaction",
+  async (
+    req: Request<
+      {},
+      {},
+      {
+        chain: string;
+        signedTxn: HexString;
+      }
+    >,
+    res: Response
+  ) => {
+    const { chain, signedTxn } = req.body;
+
+    const web3 = providers[chain] ?? providers.default;
+
+    try {
+      const txResult = await web3.eth.sendSignedTransaction(signedTxn);
+
+      // const txData: any = { ...txResult };
+      // delete txData?.logsBloom;
+
+      res.status(200).send({ transactionHash: txResult.transactionHash });
+    } catch (error: any) {
+      console.error(`Error sending transaction: ${error}`);
+
+      console.log(error);
+
+      res.status(400).send({
+        error: error?.message ?? "Error while sending transaction",
+      });
+    }
+  }
+);
 
 app.use("/sdk", sdkRouter);
 
