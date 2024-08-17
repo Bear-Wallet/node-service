@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import Web3, { HexString, Transaction } from "web3";
+import Web3, { FMT_BYTES, FMT_NUMBER, HexString, Transaction } from "web3";
 import * as dotenv from "dotenv";
 import { NFT } from "./interface";
 import { readFileSync } from "fs";
@@ -40,18 +40,6 @@ const providers: {
     new Web3.providers.HttpProvider(providerUrls.arbitrum_sepolia)
   ),
 };
-
-const web3Mainnet = new Web3(
-  new Web3.providers.HttpProvider(
-    `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
-  )
-);
-
-const web3Sepolia = new Web3(
-  new Web3.providers.HttpProvider(
-    `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
-  )
-);
 
 let TOKENS_SEPOLIA = [
   {
@@ -151,24 +139,16 @@ const getTokens = async (
 
 app.get("/get-wallet", async (req: Request, res: Response) => {
   const walletAddress = req.query.address?.toString();
-  const chainType = req.query.chain?.toString();
-  try {
-    let network = "";
-    let web3: Web3<RegisteredSubscription> | null = null;
+  const chainType = req.query.chain?.toString() ?? "default";
 
-    if (chainType === "mainnet") {
-      web3 = web3Mainnet;
-      network = "mainnet";
-    } else {
-      web3 = web3Sepolia;
-      network = "sepolia";
-    }
+  try {
+    const web3 = providers[chainType] ?? providers.default;
 
     let balance = await web3.eth.getBalance(walletAddress!);
     const balanceEth = web3.utils.fromWei(balance, "ether");
 
-    const nfts = await getNFTs(walletAddress!, network);
-    const tokens = await getTokens(web3, network, walletAddress!);
+    const nfts = await getNFTs(walletAddress!, chainType);
+    const tokens = await getTokens(web3, chainType, walletAddress!);
 
     const resp = await fetch(
       `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=ETH&convert=USD`,
@@ -198,35 +178,59 @@ app.get("/get-wallet", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/get-gas-price", async (req: Request, res: Response) => {
-  const chainType = req.query.chain?.toString() ?? "default";
+app.get(
+  "/get-gas-price",
+  async (
+    req: Request<{}, {}, {}, { chain: string; walletAddress?: HexString }>,
+    res: Response
+  ) => {
+    const chainType = req.query.chain?.toString() ?? "default";
 
-  const web3 = providers[chainType] ?? providers.default;
+    const web3 = providers[chainType] ?? providers.default;
 
-  try {
-    // Get the current gas price in wei
-    const gasPriceWei = await web3.eth.getGasPrice();
+    try {
+      // Get the current gas price in wei
+      const gasPriceWei = await web3.eth.getGasPrice();
 
-    // Convert gas price to gwei (1 gwei = 1e9 wei)
-    const gasPriceGwei = web3.utils.fromWei(gasPriceWei, "gwei");
+      // Convert gas price to gwei (1 gwei = 1e9 wei)
+      const gasPriceGwei = web3.utils.fromWei(gasPriceWei, "gwei");
 
-    // Assume a typical gas limit for a simple transaction
-    const gasLimit = BigInt(21000);
+      // Assume a typical gas limit for a simple transaction
+      const gasLimit = BigInt(21000);
 
-    // Calculate the estimated fee in wei
-    const estimatedFeeWei = gasPriceWei * gasLimit;
+      // Calculate the estimated fee in wei
+      const estimatedFeeWei = gasPriceWei * gasLimit;
 
-    res.send({
-      gasPriceGwei: gasPriceGwei.toString(),
-      estimatedFeeWei: estimatedFeeWei.toString(),
-    });
-  } catch (error: any) {
-    console.error(`Error fetching gas price: ${error.message}`);
-    res.status(400).send({
-      error: "Error while fetching gas price",
-    });
+      const data: any = {
+        gasPricWei: gasPriceWei.toString(),
+        gasPriceGwei: gasPriceGwei.toString(),
+        estimatedFeeWei: estimatedFeeWei.toString(),
+      };
+
+      if (req.query.walletAddress) {
+        const walletAddress = req.query.walletAddress;
+
+        const nonce = await web3.eth.getTransactionCount(
+          walletAddress,
+          undefined,
+          {
+            number: FMT_NUMBER.NUMBER,
+            bytes: FMT_BYTES.HEX,
+          }
+        );
+
+        data.nonce = nonce;
+      }
+
+      res.status(200).json(data);
+    } catch (error: any) {
+      console.error(`Error fetching gas price: ${error.message}`);
+      res.status(400).send({
+        error: "Error while fetching gas price",
+      });
+    }
   }
-});
+);
 
 app.post(
   "/send-transaction",
