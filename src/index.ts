@@ -262,7 +262,7 @@ app.post(
       console.log(error);
 
       res.status(400).send({
-        error: error?.message ?? "Error while sending transaction",
+        error: error?.toString() ?? "Error while sending transaction",
       });
     }
   }
