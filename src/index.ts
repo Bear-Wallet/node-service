@@ -16,7 +16,14 @@ const app = express();
 const port = process.env.PORT;
 
 app.use(bodyParser.json());
-app.use(cors());
+app.use(
+  "*",
+  cors({
+    origin: true,
+    optionsSuccessStatus: 200,
+    credentials: true,
+  })
+);
 
 const providerUrls = {
   mainnet: `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
