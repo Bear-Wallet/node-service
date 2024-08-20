@@ -14,3 +14,11 @@ model SessionData {
   type      String
   createdAt DateTime @default(now())
 }
+
+model RequestData {
+  id        Int      @id @default(autoincrement())
+  sessionId String   @unique
+  data      String
+  type      String
+  createdAt DateTime @default(now())
+}
