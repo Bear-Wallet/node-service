@@ -137,6 +137,10 @@ const getTokens = async (
   return token_balances;
 };
 
+app.get("/hello", async (req: Request, res: Response) => {
+  res.status(200).send("Hello World!");
+});
+
 app.get("/get-wallet", async (req: Request, res: Response) => {
   const walletAddress = req.query.address?.toString();
   const chainType = req.query.chain?.toString() ?? "default";
