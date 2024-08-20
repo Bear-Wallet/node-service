@@ -34,7 +34,7 @@ router.post(
     const { sessionId, data, type } = req.body;
 
     try {
-      const reqData = await prisma.sessionData.create({
+      const reqData = await prisma.requestData.create({
         data: {
           sessionId,
           data,
@@ -56,7 +56,7 @@ router.get(
     const { sessionId } = req.query;
 
     try {
-      const sessionData = await prisma.requestData.findUnique({
+      const sessionData = await prisma.sessionData.findUnique({
         where: { sessionId },
       });
 
