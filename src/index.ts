@@ -207,7 +207,7 @@ app.get(
       const gasPriceGwei = web3.utils.fromWei(gasPriceWei, "gwei");
 
       // Assume a typical gas limit for a simple transaction
-      const gasLimit = BigInt(21000);
+      const gasLimit = BigInt(180000);
 
       // Calculate the estimated fee in wei
       const estimatedFeeWei = gasPriceWei * gasLimit;
